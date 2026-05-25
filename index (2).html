@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Siswa Multi Kelas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .status-btn {
+            transition: all 0.2s;
+        }
+        .status-btn.active-hadir { background-color: #22c55e; color: white; border-color: #16a34a; }
+        .status-btn.active-izin { background-color: #eab308; color: white; border-color: #ca8a04; }
+        .status-btn.active-sakit { background-color: #3b82f6; color: white; border-color: #2563eb; }
+        .status-btn.active-alpa { background-color: #ef4444; color: white; border-color: #dc2626; }
+        
+        .badge-h { background-color: #dcfce7; color: #166534; }
+        .badge-i { background-color: #fef9c3; color: #854d0e; }
+        .badge-s { background-color: #dbeafe; color: #1e40af; }
+        .badge-a { background-color: #fee2e2; color: #991b1b; }
+
+        .tabs-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .avatar-circle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+            overflow: hidden;
+            background-color: #cbd5e1;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .photo-upload-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #6366f1;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800">Sistem Absensi Siswa</h1>
+                <div class="flex flex-wrap items-center gap-2 mt-1">
+                    <p class="text-slate-500" id="currentDateDisplay"></p>
+                    <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Hadir +10</span>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Izin: Tetap 100</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openModal('modalLaporan')" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Lihat Laporan Mingguan
+                </button>
+                <button onclick="openModal('modalSiswa')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+                    Tambah Siswa
+                </button>
+            </div>
+        </div>
+
+        <!-- Class Navigation Tabs -->
+        <div class="mb-6">
+            <div class="tabs-container overflow-x-auto flex gap-2 pb-2">
+                <script>
+                    for(let i=7; i<=12; i++) {
+                        document.write(`<button onclick="changeClass(${i})" id="tab-${i}" class="class-tab whitespace-nowrap px-6 py-2 rounded-full font-bold transition border-2 border-transparent bg-white text-slate-500 shadow-sm hover:bg-slate-50">Kelas ${i}</button>`);
+                    }
+                </script>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <p class="text-slate-500 text-sm font-medium">Total Siswa (Kelas <span class="stat-class">7</span>)</p>
+                <p class="text-2xl font-bold text-slate-800" id="statTotal">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
+                <p class="text-slate-500 text-sm font-medium">Hadir Hari Ini</p>
+                <p class="text-2xl font-bold text-green-600" id="statHadir">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-yellow-500">
+                <p class="text-slate-500 text-sm font-medium">Izin/Sakit Hari Ini</p>
+                <p class="text-2xl font-bold text-yellow-600" id="statIzinSakit">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-red-500">
+                <p class="text-slate-500 text-sm font-medium">Alpa Hari Ini</p>
+                <p class="text-2xl font-bold text-red-600" id="statAlpa">0</p>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <h2 class="font-semibold text-slate-700">Daftar Hadir Kelas <span class="stat-class">7</span></h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-slate-400 text-sm uppercase tracking-wider">
+                            <th class="px-6 py-4 font-semibold">Foto</th>
+                            <th class="px-6 py-4 font-semibold">Nama Siswa</th>
+                            <th class="px-6 py-4 font-semibold text-center">Poin Mingguan</th>
+                            <th class="px-6 py-4 font-semibold text-center">Status Absensi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="siswaTableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <!-- Data injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="hidden p-12 text-center">
+                <div class="text-slate-300 mb-4">
+                    <svg class="mx-auto" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg>
+                </div>
+                <p class="text-slate-500">Belum ada data siswa di kelas ini.</p>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="mt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-xs text-slate-400 italic">
+                * Data akan terkapitulasi otomatis ke Laporan Mingguan setelah klik Simpan.
+            </div>
+            <div class="flex gap-3">
+                <button onclick="resetAbsensi()" class="text-slate-500 hover:text-slate-700 px-4 py-2 text-sm font-medium transition">Reset Harian</button>
+                <button onclick="simpanAbsensi()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium transition shadow-md shadow-slate-200">Simpan Kehadiran</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Laporan Mingguan -->
+    <div id="modalLaporan" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-5xl p-6 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800">Laporan Kehadiran Mingguan</h3>
+                    <p class="text-slate-500">Kelas <span class="stat-class">7</span> • Rekapitulasi per Status</p>
+                </div>
+                <button onclick="closeModal('modalLaporan')" class="text-slate-400 hover:text-slate-600 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto overflow-y-auto flex-grow">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100">
+                            <th class="px-4 py-3 font-bold">Nama Siswa</th>
+                            <th class="px-4 py-3 font-bold text-center bg-green-50 text-green-700">H</th>
+                            <th class="px-4 py-3 font-bold text-center bg-yellow-50 text-yellow-700">I</th>
+                            <th class="px-4 py-3 font-bold text-center bg-blue-50 text-blue-700">S</th>
+                            <th class="px-4 py-3 font-bold text-center bg-red-50 text-red-700">A</th>
+                            <th class="px-4 py-3 font-bold text-center">Total Poin</th>
+                            <th class="px-4 py-3 font-bold text-center">% Hadir</th>
+                        </tr>
+                    </thead>
+                    <tbody id="laporanTableBody" class="divide-y divide-slate-100">
+                        <!-- Data injected here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-6 flex justify-end">
+                <button onclick="window.print()" class="text-indigo-600 font-bold text-sm hover:underline">Cetak Laporan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah/Edit Siswa -->
+    <div id="modalSiswa" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-800">Profil Siswa</h3>
+                <button onclick="closeModal('modalSiswa')" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="editSiswaId">
+                <div class="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 group hover:border-indigo-300 transition cursor-pointer" onclick="document.getElementById('inputFoto').click()">
+                    <div id="photoPreviewContainer" class="mb-2">
+                        <div id="avatarPlaceholder" class="w-20 h-20 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                        <img id="photoDisplay" class="hidden photo-upload-preview" src="">
+                    </div>
+                    <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Ketuk untuk ganti foto</p>
+                    <input type="file" id="inputFoto" accept="image/*" class="hidden" onchange="previewImage(this)">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label>
+                    <input type="text" id="inputNama" placeholder="Masukkan nama siswa..." class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <button onclick="simpanDataSiswa()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Riwayat Individu -->
+    <div id="modalRiwayat" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <div id="riwayatAvatar" class="avatar-circle w-12 h-12"></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800" id="riwayatNamaSiswa">Nama Siswa</h3>
+                        <p class="text-sm text-slate-500">Log Kehadiran & Poin</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalRiwayat')" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-grow pr-2" id="listRiwayat"></div>
+            <div class="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+                <span class="text-sm font-medium text-slate-600">Total Poin Minggu Ini:</span>
+                <span id="riwayatTotalPoin" class="text-lg font-bold text-indigo-600">100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 transition-opacity pointer-events-none z-[100]">
+        Berhasil!
+    </div>
+
+    <script>
+        // State
+        let currentClass = 7;
+        let lastResetWeek = null;
+        let currentPhotoBase64 = null;
+
+        // Data Storage
+        let dataKelas = { 7: [], 8: [], 9: [], 10: [], 11: [], 12: [] };
+
+        const AVATAR_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#06b6d4'];
+
+        function getAvatarColor(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+        }
+
+        window.onload = () => {
+            const date = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDateDisplay').innerText = date.toLocaleDateString('id-ID', options);
+            changeClass(7);
+            checkWeeklyReset();
+            setInterval(checkWeeklyReset, 3600000);
+        };
+
+        function changeClass(classNum) {
+            currentClass = classNum;
+            document.querySelectorAll('.class-tab').forEach(tab => {
+                tab.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+                tab.classList.add('bg-white', 'text-slate-500');
+            });
+            const activeTab = document.getElementById(`tab-${classNum}`);
+            if(activeTab) {
+                activeTab.classList.replace('bg-white', 'bg-indigo-600');
+                activeTab.classList.replace('text-slate-500', 'text-white');
+            }
+            document.querySelectorAll('.stat-class').forEach(el => el.innerText = classNum);
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('siswaTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const listSiswa = dataKelas[currentClass];
+            
+            if (listSiswa.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                tbody.innerHTML = listSiswa.map((siswa) => {
+                    const avatarContent = siswa.foto 
+                        ? `<img src="${siswa.foto}" class="w-full h-full object-cover">`
+                        : `<span>${siswa.nama.charAt(0)}</span>`;
+                    const avatarStyle = siswa.foto ? `background: white;` : `background-color: ${getAvatarColor(siswa.nama)}`;
+
+                    return `
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="px-6 py-4">
+                            <div class="avatar-circle" style="${avatarStyle}">${avatarContent}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col group">
+                                <button onclick="openModal('modalRiwayat', ${siswa.id})" class="text-left font-semibold text-slate-800 hover:text-indigo-600 transition">
+                                    ${siswa.nama}
+                                </button>
+                                <button onclick="openModal('modalSiswa', ${siswa.id})" class="text-left text-[10px] text-slate-400 opacity-0 group-hover:opacity-100 uppercase font-bold tracking-tighter hover:text-indigo-500 transition">Edit Profil</button>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${siswa.poin >= 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                ${siswa.poin}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex justify-center gap-1">
+                                <button onclick="setAbsen(${siswa.id}, 'H')" class="status-btn w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border border-slate-200 ${siswa.status === 'H' ? 'active-hadir' : 'bg-white text-slate-500 hover:bg-slate-50'}">H</button>
+                                <button onclick="setAbsen(${siswa.id}, 'I')" class="status-btn w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border border-slate-200 ${siswa.status === 'I' ? 'active-izin' : 'bg-white text-slate-500 hover:bg-slate-50'}">I</button>
+                                <button onclick="setAbsen(${siswa.id}, 'S')" class="status-btn w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border border-slate-200 ${siswa.status === 'S' ? 'active-sakit' : 'bg-white text-slate-500 hover:bg-slate-50'}">S</button>
+                                <button onclick="setAbsen(${siswa.id}, 'A')" class="status-btn w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border border-slate-200 ${siswa.status === 'A' ? 'active-alpa' : 'bg-white text-slate-500 hover:bg-slate-50'}">A</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            const list = dataKelas[currentClass];
+            document.getElementById('statTotal').innerText = list.length;
+            document.getElementById('statHadir').innerText = list.filter(s => s.status === 'H').length;
+            document.getElementById('statIzinSakit').innerText = list.filter(s => s.status === 'I' || s.status === 'S').length;
+            document.getElementById('statAlpa').innerText = list.filter(s => s.status === 'A').length;
+        }
+
+        function setAbsen(id, status) {
+            const siswa = dataKelas[currentClass].find(s => s.id === id);
+            if (siswa) {
+                const oldStatus = siswa.status;
+                if (oldStatus === status) {
+                    revertPoin(siswa, oldStatus);
+                    siswa.status = null;
+                } else {
+                    if (oldStatus) revertPoin(siswa, oldStatus);
+                    applyPoin(siswa, status);
+                    siswa.status = status;
+                }
+                renderTable();
+            }
+        }
+
+        function applyPoin(siswa, status) {
+            if (status === 'H') siswa.poin += 10;
+            if (status === 'A') siswa.poin -= 10;
+            if (status === 'S') siswa.poin -= 5;
+            // Izin: Poin tetap (No change)
+        }
+
+        function revertPoin(siswa, status) {
+            if (status === 'H') siswa.poin -= 10;
+            if (status === 'A') siswa.poin += 10;
+            if (status === 'S') siswa.poin += 5;
+        }
+
+        function simpanAbsensi() {
+            const tanggal = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            let count = 0;
+            dataKelas[currentClass].forEach(siswa => {
+                if (siswa.status) {
+                    let pChange = 0;
+                    if (siswa.status === 'H') pChange = 10;
+                    else if (siswa.status === 'A') pChange = -10;
+                    else if (siswa.status === 'S') pChange = -5;
+                    
+                    siswa.riwayat.push({ tanggal, status: siswa.status, poinChange: pChange });
+                    siswa.status = null;
+                    count++;
+                }
+            });
+            if (count > 0) { 
+                renderTable(); 
+                showToast(`${count} data absensi disimpan ke laporan!`); 
+            } else { 
+                showToast("Pilih status absensi dahulu!"); 
+            }
+        }
+
+        function openModal(id, siswaId = null) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            if (id === 'modalLaporan') {
+                generateLaporan();
+            } else if (id === 'modalRiwayat') {
+                showRiwayat(siswaId);
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('flex');
+        }
+
+        function generateLaporan() {
+            const tbody = document.getElementById('laporanTableBody');
+            const listSiswa = dataKelas[currentClass];
+            
+            if (listSiswa.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 italic">Belum ada data siswa.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = listSiswa.map(siswa => {
+                const rekap = { H: 0, I: 0, S: 0, A: 0 };
+                siswa.riwayat.forEach(item => rekap[item.status]++);
+                
+                const totalKehadiran = rekap.H + rekap.I + rekap.S + rekap.A;
+                const persentaseHadir = totalKehadiran > 0 ? Math.round((rekap.H / totalKehadiran) * 100) : 0;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3 font-medium text-slate-800">${siswa.nama}</td>
+                        <td class="px-4 py-3 text-center text-green-700 font-bold">${rekap.H}</td>
+                        <td class="px-4 py-3 text-center text-yellow-700 font-bold">${rekap.I}</td>
+                        <td class="px-4 py-3 text-center text-blue-700 font-bold">${rekap.S}</td>
+                        <td class="px-4 py-3 text-center text-red-700 font-bold">${rekap.A}</td>
+                        <td class="px-4 py-3 text-center font-bold text-indigo-600">${siswa.poin}</td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="flex flex-col items-center">
+                                <span class="text-xs font-bold ${persentaseHadir > 80 ? 'text-green-600' : 'text-slate-500'}">${persentaseHadir}%</span>
+                                <div class="w-16 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                                    <div class="h-full ${persentaseHadir > 80 ? 'bg-green-500' : 'bg-slate-400'}" style="width: ${persentaseHadir}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function simpanDataSiswa() {
+            const input = document.getElementById('inputNama');
+            const editId = document.getElementById('editSiswaId').value;
+            const nama = input.value.trim();
+            if (nama) {
+                if (editId) {
+                    const idx = dataKelas[currentClass].findIndex(s => s.id == editId);
+                    dataKelas[currentClass][idx].nama = nama;
+                    if (currentPhotoBase64) dataKelas[currentClass][idx].foto = currentPhotoBase64;
+                } else {
+                    dataKelas[currentClass].push({
+                        id: Date.now(),
+                        nama: nama,
+                        foto: currentPhotoBase64,
+                        status: null,
+                        poin: 100,
+                        riwayat: []
+                    });
+                }
+                closeModal('modalSiswa');
+                renderTable();
+            }
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentPhotoBase64 = e.target.result;
+                    document.getElementById('photoDisplay').src = currentPhotoBase64;
+                    document.getElementById('photoDisplay').classList.remove('hidden');
+                    document.getElementById('avatarPlaceholder').classList.add('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function showRiwayat(id) {
+            const siswa = dataKelas[currentClass].find(s => s.id === id);
+            if (!siswa) return;
+            document.getElementById('riwayatNamaSiswa').innerText = siswa.nama;
+            document.getElementById('riwayatTotalPoin').innerText = siswa.poin;
+            const avatarEl = document.getElementById('riwayatAvatar');
+            avatarEl.innerHTML = siswa.foto ? `<img src="${siswa.foto}" class="w-full h-full object-cover">` : `<span>${siswa.nama.charAt(0)}</span>`;
+            avatarEl.style.backgroundColor = siswa.foto ? 'white' : getAvatarColor(siswa.nama);
+            const listContainer = document.getElementById('listRiwayat');
+            listContainer.innerHTML = siswa.riwayat.length === 0 
+                ? '<p class="text-center py-8 text-slate-400 italic">Belum ada riwayat.</p>'
+                : [...siswa.riwayat].reverse().map(item => `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">${item.tanggal}</p>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase badge-${item.status.toLowerCase()}">${item.status === 'H' ? 'Hadir' : (item.status === 'I' ? 'Izin' : (item.status === 'S' ? 'Sakit' : 'Alpa'))}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold ${item.poinChange > 0 ? 'text-green-600' : (item.poinChange < 0 ? 'text-red-600' : 'text-slate-400')}">
+                                ${item.poinChange > 0 ? '+' : ''}${item.poinChange} Poin
+                            </p>
+                        </div>
+                    </div>`).join('');
+        }
+
+        function checkWeeklyReset() {
+            const now = new Date();
+            const currentWeek = getWeekNumber(now);
+            if (lastResetWeek === null) { lastResetWeek = currentWeek; return; }
+            if (currentWeek !== lastResetWeek) {
+                Object.keys(dataKelas).forEach(kelas => {
+                    dataKelas[kelas].forEach(siswa => { siswa.status = null; siswa.poin = 100; siswa.riwayat = []; });
+                });
+                lastResetWeek = currentWeek;
+                renderTable();
+                showToast("Minggu baru dimulai! Data telah direset.");
+            }
+        }
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.replace('opacity-0', 'opacity-100');
+            setTimeout(() => toast.classList.replace('opacity-100', 'opacity-0'), 3000);
+        }
+
+        function resetAbsensi() {
+            dataKelas[currentClass].forEach(s => s.status = null);
+            renderTable();
+            showToast("Status harian dibersihkan.");
+        }
+    </script>
+</body>
+</html>
